@@ -1,8 +1,13 @@
 export default {
   EMPTY: '',
-  DEFAULT_USER: 'admin',
-  DEFAULT_PASSWORD: '123456',
+  DEFAULT_USER: 'vuongluu',
+  DEFAULT_PASSWORD: '!23456Abc',
   DEFAULT_COLOR: '#1abc9c',
+  DEFAULT_SERVER: 'http://192.168.1.3',
+  DEFAULT_SYNC_URI: '/api/v1/sync',
+  DEFAULT_BACKUP_URI: '/api/v1/backup',
+  DEFAULT_AUTH_URI: '/api/v1/auth',
+  DEFAULT_SETTING_URI: '/api/v1/settings',
   VALIDATE: {
   	username_required: 'Tên đăng nhập là bắt buộc',
   	password_required: 'Mật khẩu là bắt buộc',
@@ -31,8 +36,8 @@ export default {
   TYPES_TBL: 'types',
   ACTIONS_TBL: 'actions',
   SETTINGS_TBL: 'settings',
-  BACKUP_SUCCESS : 'Đã backup dữ liệu thành công',
+  BACKUP_SUCCESS : 'Đã backup:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu',
   SYNC_SUCCESS : 'Dữ liệu đã đồng bộ mới nhất.',
-  SYNC_COUNT_SUCCESS : 'Đã đồng bộ: {0} dữ liệu.',
+  SYNC_COUNT_SUCCESS : 'Đã đồng bộ:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu',
   ACTIONSHEET_SETTING_TITLE: 'Cài đặt'
 };

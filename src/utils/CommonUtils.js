@@ -52,6 +52,10 @@ const CommonUtils = {
         x1 = x1.replace(rgx, '$1' + groupSeperate + '$2');
     }
     return x1 + x2 + ' '  + Constants.CURRENCY;
+  },
+
+  cnvNull: (input) => {
+    return input == null || input == 'null' ? '--' : input;
   }
 }
 

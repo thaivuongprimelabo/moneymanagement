@@ -56,7 +56,8 @@ export default class  Home extends Component<Props> {
               { name: '11', code: '#f1c40f', budget: '3.000.000', 'used': '1.300.000'  }, 
               { name: '12', code: '#e67e22', budget: '3.000.000', 'used': '1.300.000'  }
             ],
-      loading: false
+      loading: false,
+      user_id: 0
     }
 
     
@@ -64,6 +65,9 @@ export default class  Home extends Component<Props> {
 
   static navigationOptions = ({ navigation }) => {
     const { params = {} } = navigation.state;
+
+    
+
     return {
       title: 'Năm 2018',
       headerStyle: {
@@ -93,35 +97,47 @@ export default class  Home extends Component<Props> {
           }
       });
     });
+
+    const { navigation } = this.props;
+    var userId = navigation.getParam('user_id', '0');
+
+    this.setState({
+      user_id: userId
+    });
   }
 
   backupData() {
+    
+
     var output = {types: [], actions: []};
 
     db.transaction((tx) => {
-        tx.executeSql('SELECT * FROM ' + Constants.ACTIONS_TBL, [], (tx, results) => {
+        tx.executeSql('SELECT * FROM ' + Constants.ACTIONS_TBL + ' WHERE is_sync = 0', [], (tx, results) => {
             var len = results.rows.length;
             for(var i = 0; i < len; i++) {
-              var obj = {id: results.rows.item(i).id, name : results.rows.item(i).name, cost: results.rows.item(i).cost, time: results.rows.item(i).time, location: results.rows.item(i).location, create_at: results.rows.item(i).create_at, comment: results.rows.item(i).comment, type_id: results.rows.item(i).type_id };
+              var obj = {id: results.rows.item(i).id, name : results.rows.item(i).name, cost: results.rows.item(i).cost, time: results.rows.item(i).time, location: results.rows.item(i).location, comment: results.rows.item(i).comment, type_id: results.rows.item(i).type_id, is_sync: 1, created_at: results.rows.item(i).created_at, updated_at: results.rows.item(i).updated_at, user_id: this.state.user_id };
               output.actions.push(obj);
-            } 
-        });
-
-        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
-            var len = results.rows.length;
-            for(var i = 0; i < len; i++) {
-              var obj = {id: results.rows.item(i).id, value : results.rows.item(i).value, name: results.rows.item(i).name, color: results.rows.item(i).color, icon: '' };
-              output.types.push(obj);
             }
-
-            this.postToBackup(output);
+            //this.postToBackup(output);
         });
+
+        // tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL  + ' WHERE is_sync = 0', [], (tx, results) => {
+        //     var len = results.rows.length;
+        //     for(var i = 0; i < len; i++) {
+        //       var obj = {value : results.rows.item(i).value, name: results.rows.item(i).name, color: '', icon: '', 0, order: results.rows.item(i).order, created_at: results.rows.item(i).created_at, updated_at: results.rows.item(i).updated_at, user_id: this.state.user_id};
+        //       output.types.push(obj);
+        //     }
+        // });
+        //console.log(output);
+        this.postToBackup(output);
     });
   }
 
   postToBackup(data) {
     this.setLoadingVisible(true);
-    fetch('http://d7e21f64.ngrok.io/api/backup', {
+    var url = this.state.SERVER_URL + this.state.BACKUP_URI;
+    console.log(url);
+    fetch(url, {
       method: 'POST',
       headers: {
         Accept: 'application/json',
@@ -133,7 +149,10 @@ export default class  Home extends Component<Props> {
     .then((responseJson) => {
         if(responseJson.code === 200) {
           this.setLoadingVisible(false);
-          Alert.alert(Constants.ALERT_INFO, Constants.BACKUP_SUCCESS);
+          var msg = Constants.BACKUP_SUCCESS;
+          msg = msg.replace('{0}', data.types.length);
+          msg = msg.replace('{1}', data.actions.length);
+          Alert.alert(Constants.ALERT_INFO, msg);
         }
 
     })
@@ -142,21 +161,24 @@ export default class  Home extends Component<Props> {
     });
   }
 
-  syncFromServer() {
+  syncFromServer(clear) {
       this.setLoadingVisible(true);
-      var server = this.state.server_url;
-      var url = server + '/api/sync';
-      if(this.state.is_first === '0') {
-        db.transaction((tx) => {
-          tx.executeSql('UPDATE ' + Constants.SETTINGS_TBL + ' SET value = \"1\" WHERE key = \"is_first\"', [], (tx, results) => {
-              this.setState({
-                is_first: 1
-              });
-          });
-        });
-      } else {
-        url = server + '/api/sync/0';
+      var url = this.state.SERVER_URL + this.state.SYNC_URI;
+      if(clear) {
+        url = url + '?clear=1&user_id=' + this.state.user_id;
       }
+      console.log(url);
+      // if(this.state.is_first === '0') {
+      //   db.transaction((tx) => {
+      //     tx.executeSql('UPDATE ' + Constants.SETTINGS_TBL + ' SET value = \"1\" WHERE key = \"is_first\"', [], (tx, results) => {
+      //         this.setState({
+      //           is_first: 1
+      //         });
+      //     });
+      //   });
+      // } else {
+      //   url = server + '/api/sync/0';
+      // }
       // alert(url);
       
       fetch(url, {
@@ -174,9 +196,9 @@ export default class  Home extends Component<Props> {
               var obj = json.types[i];
               if(sql == '') {
                 sql = 'INSERT INTO ' + Constants.TYPES_TBL + ' VALUES';
-                sql += '(' + obj.id + ',' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", ' + obj.is_sync + ', ' + obj.order + ')';
+                sql += '(' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", 1, ' + obj.order + ', \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
               } else {
-                sql += ',(' + obj.id + ',' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", ' + obj.is_sync + ', ' + obj.order + ')';
+                sql += ',(' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", 1, ' + obj.order + ', \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
               }
             }
 
@@ -186,20 +208,23 @@ export default class  Home extends Component<Props> {
               var obj = json.actions[i];
               if(sql1 == '') {
                 sql1 = 'INSERT INTO ' + Constants.ACTIONS_TBL + ' VALUES';
-                sql1 += '(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.create_at + '\", \"' + obj.comment + '\", ' + obj.type_id + ', ' + obj.is_sync + ')';
+                sql1 += '(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.comment + '\", ' + obj.type_id + ', 1, \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
               } else {
-                sql1 += ',(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.create_at + '\", \"' + obj.comment + '\", ' + obj.type_id + ', ' + obj.is_sync + ')';
+                sql1 += ',(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.comment + '\", ' + obj.type_id + ', 1, \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
               }
             }
             
             db.transaction((tx) => {
-              // tx.executeSql('DELETE FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
+              if(clear) {
+                tx.executeSql('DELETE FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
                   
-              // });
+                });
 
-              // tx.executeSql('DELETE FROM ' + Constants.ACTIONS_TBL, [], (tx, results) => {
-                  
-              // });
+                tx.executeSql('DELETE FROM ' + Constants.ACTIONS_TBL, [], (tx, results) => {
+                    
+                });
+              }
+              
 
               if(sql !== '') {
                 tx.executeSql(sql, [], (tx, results) => {
@@ -209,7 +234,6 @@ export default class  Home extends Component<Props> {
               
               if(sql1 !== '') {
                 tx.executeSql(sql1, [], (tx, results) => {
-                    
                 });
               }
             });
@@ -218,7 +242,8 @@ export default class  Home extends Component<Props> {
               Alert.alert(Constants.ALERT_INFO, Constants.SYNC_SUCCESS);
             } else {
               var msg = Constants.SYNC_COUNT_SUCCESS;
-              msg = msg.replace('{0}', total);
+              msg = msg.replace('{0}', length);
+              msg = msg.replace('{1}', length1);
               Alert.alert(Constants.ALERT_INFO, msg);
             }
             
@@ -247,13 +272,17 @@ export default class  Home extends Component<Props> {
     if(index === 0) {
       this.backupData();
     } else if(index === 1) {
-      this.syncFromServer();
+      this.syncFromServer(false);
+    } else if(index === 2) {
+      this.syncFromServer(true);
     }
   }
 
   render() {
 
     return (
+
+
         <View style={{ flex:1 }}>
           <GridView
             itemDimension={130}
@@ -274,8 +303,8 @@ export default class  Home extends Component<Props> {
             <ActionSheet
               ref={o => this.ActionSheet = o}
               title={Constants.ACTIONSHEET_SETTING_TITLE}
-              options={['Sao lưu dữ liệu', 'Đồng bộ dữ liệu', this.state.server_url, Constants.ALERT_CLOSE]}
-              cancelButtonIndex={3}
+              options={['Sao lưu dữ liệu', 'Đồng bộ dữ liệu', 'Xóa và đồng bộ lại tất cả', this.state.SERVER_URL, Constants.ALERT_CLOSE]}
+              cancelButtonIndex={4}
               destructiveButtonIndex={1}
               onPress={(index) => this.onClickOption(index) }
             />

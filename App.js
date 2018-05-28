@@ -23,6 +23,7 @@ import Month from './src/Month';
 import Action from './src/Action';
 import Day from './src/Day';
 import Settings from './src/Settings';
+import Welcome from './src/Welcome';
 
 const RootStack = StackNavigator(
   {
@@ -32,10 +33,11 @@ const RootStack = StackNavigator(
     Month: {screen: Month},
     Action: {screen: Action},
     Day: {screen: Day},
-    Settings: {screen: Settings}
+    Settings: {screen: Settings},
+    Welcome: {screen: Welcome}
   },
   {
-    initialRouteName: 'Home'
+    initialRouteName: 'Welcome'
   }
 );
 

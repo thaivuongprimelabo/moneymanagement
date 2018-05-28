@@ -48,10 +48,11 @@ export default class Day extends Component<Props> {
       fullTime: CommonUtils.formatDatetime(year, month, day, 'YYYYMMDD'),
       color: color,
       modalVisible: false,
-      detail_id: 0
+      detail_id: 0,
+      actionInDay:[]
     }
 
-    this.getActionList();
+    
 
   }
 
@@ -82,6 +83,7 @@ export default class Day extends Component<Props> {
 
   componentDidMount() {
     this.props.navigation.setParams({ increaseCount: this.doAction });
+    this.getActionList();
   }
 
   doAction = () => {
@@ -100,7 +102,7 @@ export default class Day extends Component<Props> {
               var actionInDay = [];
                 for(var i = 0; i < len; i++) {
                    var row = results.rows.item(i);
-                   var obj = {id: row.id, name: row.name, type: row.type_id, cost: CommonUtils.formatCurrency(row.cost, '.', '.'), color: row.color, icon: row.icon, create_at: row.create_at};
+                   var obj = {id: row.id, name: row.name, type: row.type_id, cost: CommonUtils.formatCurrency(row.cost, '.', '.'), color: row.color, icon: row.icon, location: row.location, created_at: row.created_at};
                    actionInDay.push(obj);
                 }
 
@@ -164,15 +166,16 @@ export default class Day extends Component<Props> {
             style={styles.gridView}
             renderItem={(item,index) => (
               <TouchableOpacity onPress={() => this.doDayClick(item.id) } onLongPress={() => this.deleteAction(item.id, item.name) }>
-                <View style={[styles.itemContainer, { backgroundColor: item.color }]}>
+                <View style={[styles.itemContainer, { backgroundColor: this.state.color }]}>
                   <View style={{ flex: 1, flexDirection: 'row' }}>
                     <View style={ {flex: 0.8, flexDirection: 'column'} }>
                       <Text style={styles.itemName}>{ item.name }</Text>
                       <Text style={styles.itemName}>{ item.cost }</Text>
-                      <Text style={styles.itemName}>{ item.create_at }</Text>
+                      <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.location) }</Text>
+                      <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.created_at) }</Text>
                     </View>
                     <View style={ {flex: 0.2, flexDirection: 'column'} }>
-                      <Image source={{uri:item.icon}} style={{width: 70, height: 70}} />
+                      <Image style={{width: 66, height: 66, marginTop:5}} source={{ uri:item.icon }}></Image>
                     </View>
                   </View>
                 </View>
@@ -195,7 +198,7 @@ export default class Day extends Component<Props> {
                     backgroundColor: 'rgba(51,51,51,0.7)' }}>
                     <View style={{
                             width: 300,
-                            height: 300}}>
+                            height: 400}}>
                       <Action closeModal={ this.setModalVisible } time={ this.state.fullTime } id = { this.state.detail_id } />
                     </View>
                 </View>

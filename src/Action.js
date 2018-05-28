@@ -38,7 +38,7 @@ export default class  Action extends Component<Props> {
     super(props);
     var types = [];
     db.transaction((tx) => {
-        tx.executeSql('SELECT * FROM types', [], (tx, results) => {
+        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
             var len = results.rows.length;
             for(var i = 0; i < len; i++) {
                var row = results.rows.item(i);
@@ -69,6 +69,14 @@ export default class  Action extends Component<Props> {
                   value: results.rows.item(0).cost,
                   style : Styles.inputText
                 },
+                location: {
+                  value: results.rows.item(0).location,
+                  style : Styles.inputText
+                },
+                comment: {
+                  value: results.rows.item(0).comment,
+                  style : Styles.inputText
+                },
                 text: Constants.UPDATE_BTN,
                 detail_id: this.props.id
               });
@@ -91,6 +99,14 @@ export default class  Action extends Component<Props> {
         style : Styles.inputText
       },
       cost: {
+        value : Constants.EMPTY,
+        style : Styles.inputText
+      },
+      location: {
+        value : Constants.EMPTY,
+        style : Styles.inputText
+      },
+      comment: {
         value : Constants.EMPTY,
         style : Styles.inputText
       },
@@ -138,7 +154,16 @@ export default class  Action extends Component<Props> {
 
     if(type === 3) {
       this.setState({
-        type_input: {
+        location: {
+          value : text,
+          style : Styles.inputText
+        }
+      });
+    }
+
+    if(type === 4) {
+      this.setState({
+        comment: {
           value : text,
           style : Styles.inputText
         }
@@ -149,14 +174,17 @@ export default class  Action extends Component<Props> {
 
   doRegister() {
 
-    let create_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
     let time = this.props.time;
     let action = this.state.action.value;
     let cost = this.state.cost.value;
     let type = this.state.type.value;
-    let sql = 'INSERT INTO actions(name,cost,time,location,create_at,comment,type_id) VALUES("' + action + '","' + cost + '","' + time + '",null,"' + create_at + '",null,"' + type + '")';
+    let comment = this.state.comment.value;
+    let location = this.state.location.value;
+    let created_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
+    let updated_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
+    let sql = 'INSERT INTO actions(name,cost,time,location,comment,type_id,is_sync,created_at,updated_at) VALUES("' + action + '","' + cost + '","' + time + '","' + location + '","' + comment + '","' + type + '",0,"' + created_at + '","' + updated_at + '")';
     if(this.state.detail_id !== Constants.EMPTY) {
-      sql = 'UPDATE actions SET name = "' + action + '", cost = "' + cost + '", type_id = ' + type + ' WHERE id = ' + this.state.detail_id;
+      sql = 'UPDATE actions SET name = "' + action + '", cost = "' + cost + '", location = "' + location + '", comment = "' + comment + '", type_id = ' + type + ', is_sync = 0, updated_at = "' + updated_at + '" WHERE id = ' + this.state.detail_id;
     }
     db.transaction((tx) => {
         tx.executeSql(sql, [], (tx, results) => {
@@ -219,6 +247,24 @@ export default class  Action extends Component<Props> {
               onChangeText={ (text) => this.onChange(text, 2) }
               value={this.state.cost.value}
               placeholder="Chi phí"
+              />
+            </View>
+            <View style={{flexDirection:'row'}}>
+              <TextInput
+              underlineColorAndroid='transparent'
+              style={this.state.location.style}
+              onChangeText={ (text) => this.onChange(text, 3) }
+              value={this.state.location.value}
+              placeholder="Vị trí"
+              />
+            </View>
+            <View style={{flexDirection:'row'}}>
+              <TextInput
+              underlineColorAndroid='transparent'
+              style={this.state.comment.style}
+              onChangeText={ (text) => this.onChange(text, 4) }
+              value={this.state.comment.value}
+              placeholder="Bình luận"
               />
             </View>
             <View style={{flexDirection:'row'}}>

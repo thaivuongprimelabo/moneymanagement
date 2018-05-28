@@ -23,6 +23,10 @@ import {
 } from 'react-navigation';
 import Constants from './constants/Constants';
 import Styles from './constants/Styles';
+import Loading from './Loading';
+
+var SQLite = require('react-native-sqlite-storage')
+var db = SQLite.openDatabase({name: 'test.db', createFromLocation: '~sqliteexample.db'});
 
 export default class Login extends Component<Props> {
 
@@ -40,16 +44,17 @@ export default class Login extends Component<Props> {
     this.doAccept = this.doAccept.bind(this);
     this.state = { 
       username: {
-        value : Constants.EMPTY,
+        value : Constants.DEFAULT_USER,
         style : Styles.inputText
       },
       password: {
-        value : Constants.EMPTY,
+        value : Constants.DEFAULT_PASSWORD,
         style : Styles.inputText
       },
       validate : [],
       checked: true,
-      secureTextEntry: true
+      secureTextEntry: true,
+      loading: false
     };
   }
 
@@ -57,7 +62,76 @@ export default class Login extends Component<Props> {
     
     var error = this.checkError(this.state.username.value, this.state.password.value, true, false);
     if(!error) {
-      this.props.navigation.navigate('Home', {increaseCount: null});
+      this.setLoadingVisible(true);
+      var info = {loginid: this.state.username.value, password: this.state.password.value};
+      var url = Constants.DEFAULT_SERVER + Constants.DEFAULT_AUTH_URI;
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(info),
+      })
+      .then((response) => response.json())
+      .then((responseJson) => {
+          if(responseJson.code === 200) {
+            var json = JSON.parse(responseJson.data);
+
+            var sql = '';
+            var length = json.types.length;
+            for(var i = 0; i < length; i++) {
+              var obj = json.types[i];
+              if(sql == '') {
+                sql = 'INSERT INTO ' + Constants.TYPES_TBL + ' VALUES';
+                sql += '(' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", 1, ' + obj.order + ', \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
+              } else {
+                sql += ',(' + obj.value + ',\"' + obj.name + '\",\"' + obj.color + '\",\"' + obj.icon + '\", 1, ' + obj.order + ', \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
+              }
+            }
+
+            var length1 = json.actions.length;
+            var sql1 = '';
+            for(var i = 0; i < length1; i++) {
+              var obj = json.actions[i];
+              if(sql1 == '') {
+                sql1 = 'INSERT INTO ' + Constants.ACTIONS_TBL + ' VALUES';
+                sql1 += '(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.comment + '\", ' + obj.type_id + ', 1, \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
+              } else {
+                sql1 += ',(' + obj.id + ',\"' + obj.name + '\",\"' + obj.cost + '\",\"' + obj.time + '\",\"' + obj.location + '\", \"' + obj.comment + '\", ' + obj.type_id + ', 1, \"' + obj.created_at + '\", \"' + obj.updated_at + '\")';
+              }
+            }
+            
+            db.transaction((tx) => {
+
+              // tx.executeSql('DELETE FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
+                  
+              // });
+
+              // tx.executeSql('DELETE FROM ' + Constants.ACTIONS_TBL, [], (tx, results) => {
+                  
+              // });
+
+              if(sql !== '') {
+                tx.executeSql(sql, [], (tx, results) => {
+                  
+                });
+              }
+              
+              if(sql1 !== '') {
+                tx.executeSql(sql1, [], (tx, results) => {
+                });
+              }
+            });
+            this.setLoadingVisible(false);
+            
+            this.props.navigation.navigate('Home', {user_id : json.user_info.id});
+          }
+
+      })
+      .catch((error) =>{
+        alert('error:' + error);
+      });
     }
     
     return false;
@@ -141,19 +215,15 @@ export default class Login extends Component<Props> {
       error = true;
     }
 
-    if(!error) {
-      if(onLoginClick && !onRegisterClick && (username !== Constants.DEFAULT_USER || password != Constants.DEFAULT_PASSWORD)) {
-        error = true;
-        var error = {key: 'invalid_account'};
-        validate.push(error);
-      }
-    }
-
     this.setState({
       validate : validate
     });
 
     return error;
+  }
+
+  setLoadingVisible(visible) {
+    this.setState({loading: visible});
   }
 
   onChangeShowPassword() {
@@ -222,6 +292,10 @@ export default class Login extends Component<Props> {
                   renderItem={({item}) => <Text style={Styles.item}>*{ Constants.VALIDATE[item.key]}</Text>}
                 />
               </View>
+            </View>
+
+            <View  style={{marginTop: 22}}>
+              <Loading closeLoading= { this.setLoadingVisible  } visible = { this.state.loading } ></Loading>
             </View>
           </View>
         </TouchableWithoutFeedback>
