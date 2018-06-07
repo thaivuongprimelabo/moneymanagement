@@ -51,7 +51,7 @@ const CommonUtils = {
     while (rgx.test(x1)) {
         x1 = x1.replace(rgx, '$1' + groupSeperate + '$2');
     }
-    return x1 + x2 + ' '  + Constants.CURRENCY;
+    return x1 + x2;
   },
 
   cnvNull: (input) => {

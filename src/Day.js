@@ -79,11 +79,14 @@ export default class Day extends Component<Props> {
   };
 
   componentWillMount() {
+    console.log('componentWillMount:Day.js');
+    this.getActionList();
   }
 
   componentDidMount() {
+    console.log('componentWillMount:Day.js');
     this.props.navigation.setParams({ increaseCount: this.doAction });
-    this.getActionList();
+    
   }
 
   doAction = () => {
@@ -96,13 +99,18 @@ export default class Day extends Component<Props> {
 
   getActionList() {
     db.transaction((tx) => {
-        tx.executeSql('SELECT actions.*, types.color AS color, types.icon AS icon FROM actions INNER JOIN types ON actions.type_id = types.value WHERE actions.time=?', [this.state.fullTime], (tx, results) => {
+
+        var sql = 'SELECT actions.*, types.color AS color, types.icon AS icon, locations.name as location_name FROM actions ';
+        sql += 'LEFT JOIN '+ Constants.LOCATIONS_TBL +' ON actions.location_id = locations.id ';
+        sql += 'LEFT JOIN ' + Constants.TYPES_TBL + ' ON actions.type_id = types.value WHERE actions.time="' + this.state.fullTime + '"';
+        console.log(sql);
+        tx.executeSql(sql, [], (tx, results) => {
             var len = results.rows.length;
             if(len > 0) {
               var actionInDay = [];
                 for(var i = 0; i < len; i++) {
                    var row = results.rows.item(i);
-                   var obj = {id: row.id, name: row.name, type: row.type_id, cost: CommonUtils.formatCurrency(row.cost, '.', '.'), color: row.color, icon: row.icon, location: row.location, created_at: row.created_at};
+                   var obj = {id: row.id, name: row.name, type: row.type_id, cost: CommonUtils.formatCurrency(row.cost, '.', '.'), color: row.color, icon: row.icon, location: row.location_name, created_at: row.created_at};
                    actionInDay.push(obj);
                 }
 
@@ -198,7 +206,7 @@ export default class Day extends Component<Props> {
                     backgroundColor: 'rgba(51,51,51,0.7)' }}>
                     <View style={{
                             width: 300,
-                            height: 400}}>
+                            height: 450}}>
                       <Action closeModal={ this.setModalVisible } time={ this.state.fullTime } id = { this.state.detail_id } />
                     </View>
                 </View>

@@ -3,7 +3,7 @@ export default {
   DEFAULT_USER: 'vuongluu',
   DEFAULT_PASSWORD: '!23456Abc',
   DEFAULT_COLOR: '#1abc9c',
-  DEFAULT_SERVER: 'http://192.168.1.3',
+  DEFAULT_SERVER: 'http://heart-warming-analy.000webhostapp.com/public',
   DEFAULT_SYNC_URI: '/api/v1/sync',
   DEFAULT_BACKUP_URI: '/api/v1/backup',
   DEFAULT_AUTH_URI: '/api/v1/auth',
@@ -36,8 +36,12 @@ export default {
   TYPES_TBL: 'types',
   ACTIONS_TBL: 'actions',
   SETTINGS_TBL: 'settings',
+  LOCATIONS_TBL: 'locations',
+  USERS_TBL: 'users',
   BACKUP_SUCCESS : 'Đã backup:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu',
   SYNC_SUCCESS : 'Dữ liệu đã đồng bộ mới nhất.',
-  SYNC_COUNT_SUCCESS : 'Đã đồng bộ:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu',
-  ACTIONSHEET_SETTING_TITLE: 'Cài đặt'
+  SYNC_COUNT_SUCCESS : 'Đã đồng bộ:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu.\n-Vị trí: {2} dữ liệu.',
+  ACTIONSHEET_SETTING_TITLE: 'Cài đặt',
+  BACKUP_FINISH: 'Đã backup tất cả dữ liệu',
+  SERVER_ERROR: 'Không thể kết nối tới máy chủ.'
 };

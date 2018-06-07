@@ -44,12 +44,26 @@ export default class Month extends Component<Props> {
   constructor(props) {
     super(props);
 
-    var date = new Date();
+    this.state = {
+      currentMonth : '',
+      currentYear : '',
+      daysInMonth : [],
+      color: ''
+    }
+  }
 
+  componentDidMount() {
+    console.log('componentWillMount:Month.js');
+  }
+
+  componentWillMount() {
+    console.log('componentWillMount:Month.js');
+    var date = new Date();
     const { navigation } = this.props;
     var year  = navigation.getParam('year',date.getYear());
     var month = navigation.getParam('month',date.getMonth());
     var color = navigation.getParam('color', '#00BF6F');
+
     var daysInMonth = [];
 
     date = new Date(year, month, 0);
@@ -64,19 +78,24 @@ export default class Month extends Component<Props> {
         var day = { name: i, code: color };
         daysInMonth.push(day);
     }
-    this.state = {
+
+    this.setState({
+      daysInMonth: daysInMonth,
       currentMonth : month,
       currentYear : year,
-      daysInMonth : daysInMonth,
       color: color
-    }
+    });
   }
 
   doDayClick(day) {
+    day = JSON.stringify(day);
+    day = day.length === 1 ? '0' + day : day;
     this.props.navigation.navigate('Day', {month: this.state.currentMonth, year: this.state.currentYear, day: day, color: this.state.color});
   }
 
   usedInDay(day) {
+    day = JSON.stringify(day);
+    day = day.length === 1 ? '0' + day : day;
     var time = CommonUtils.formatDatetime(this.state.currentYear, this.state.currentMonth, day, 'YYYYMMDD');
     var currentTime = CommonUtils.getCurrentDate('YYYYMMDD');
     var header = Constants.HEADER_TODAY_ALERT;
@@ -86,7 +105,8 @@ export default class Month extends Component<Props> {
       header = header.replace('{0}', timeWithSpec);
     }
     db.transaction((tx) => {
-        tx.executeSql('SELECT SUM(cost) AS sum_cost FROM actions WHERE time = "' + time + '"', [], (tx, results) => {
+        var sql = 'SELECT SUM(cost) AS sum_cost FROM actions WHERE time = "' + time + '"';
+        tx.executeSql(sql, [], (tx, results) => {
             var len = results.rows.length;
             Alert.alert(
               header,

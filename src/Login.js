@@ -58,6 +58,19 @@ export default class Login extends Component<Props> {
     };
   }
 
+  componentDidMount() {
+    db.transaction((tx) => {
+      tx.executeSql('SELECT * FROM ' + Constants.SETTINGS_TBL, [], (tx, results) => {
+          var len = results.rows.length;
+          for(var i = 0; i < len; i++) {
+            var str =  '{\"' + results.rows.item(i).key +'\":\"' + results.rows.item(i).value + '\"}';
+            var obj = JSON.parse(str);
+            this.setState(obj);
+          }
+      });
+    });
+  }
+
   doLogin() {
     
     var error = this.checkError(this.state.username.value, this.state.password.value, true, false);
@@ -114,14 +127,20 @@ export default class Login extends Component<Props> {
 
               if(sql !== '') {
                 tx.executeSql(sql, [], (tx, results) => {
-                  
+                  console.log(results);
                 });
               }
               
               if(sql1 !== '') {
                 tx.executeSql(sql1, [], (tx, results) => {
+                  console.log(results);
                 });
               }
+
+              var sql2 = 'INSERT INTO ' + Constants.USERS_TBL + ' VALUES(' + json.user_info.id + ', "' + json.user_info.loginid + '", "' + json.user_info.password + '")';
+              tx.executeSql(sql2, [], (tx, results) => {
+                console.log(results);
+              });
             });
             this.setLoadingVisible(false);
             

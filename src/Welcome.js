@@ -83,7 +83,7 @@ export default class  Welcome extends Component<Props> {
                   this.setState({
                     'loading_text': 'Đang tải dữ liệu...100%'
                   });
-                  setTimeout(() => { this.navigateToLogin() }, 2000)
+                  this.navigateToLogin();
                 }
               });
             }
@@ -92,12 +92,25 @@ export default class  Welcome extends Component<Props> {
 
     })
     .catch((error) =>{
-      alert('error:' + error);
+      this.setState({
+        'loading_text': 'Không thể kết nối đến server.Trạng thái offline.'
+      });
+      this.navigateToLogin();
     });
   }
 
   navigateToLogin() {
-    this.props.navigation.navigate('Login', {});
+    var sql = 'SELECT id FROM ' + Constants.USERS_TBL;
+    db.transaction((tx) => {
+      tx.executeSql(sql, [], (tx, results) => {
+        var len = results.rows.length;
+        if(len > 0) {
+          this.props.navigation.navigate('Home', {user_id : results.rows.item(0).id});
+        } else {
+          this.props.navigation.navigate('Login', {});
+        }
+      });
+    });
   }
 
   render() {

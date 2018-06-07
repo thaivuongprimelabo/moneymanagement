@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 
 import {
-  StackNavigator,
+  createStackNavigator,
 } from 'react-navigation';
 
 import Login from './src/Login';
@@ -25,7 +25,17 @@ import Day from './src/Day';
 import Settings from './src/Settings';
 import Welcome from './src/Welcome';
 
-const RootStack = StackNavigator(
+class App extends Component<Props> {
+  render() {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <Text>Home Screen</Text>
+      </View>
+    );
+  }
+}
+
+export default createStackNavigator(
   {
     Login: { screen: Login },
     Home: {screen: Home },
@@ -40,9 +50,3 @@ const RootStack = StackNavigator(
     initialRouteName: 'Welcome'
   }
 );
-
-export default class App extends Component<Props> {
-  render() {
-    return <RootStack />;
-  }
-}

@@ -36,54 +36,8 @@ export default class  Action extends Component<Props> {
 
   constructor(props) {
     super(props);
-    var types = [];
-    db.transaction((tx) => {
-        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
-            var len = results.rows.length;
-            for(var i = 0; i < len; i++) {
-               var row = results.rows.item(i);
-               var obj = {value: row.value, name: row.name, color: row.color, icon: ''};
-               types.push(obj);
-               this.setState({
-                  types : types,
-                  type: {
-                    value: this.state.type.value === Constants.EMPTY ? types[0].value : this.state.type.value
-                  }
-               });
-            }
-        });
-
-        if(this.props.id !== Constants.EMPTY) {
-            tx.executeSql('SELECT * FROM actions WHERE id = ?', [this.props.id], (tx, results) => {
-            var len = results.rows.length;
-            this.setState({
-                action: {
-                  value: results.rows.item(0).name,
-                  style : Styles.inputText
-                },
-                type: {
-                  value: results.rows.item(0).type_id,
-                  style : Styles.inputText
-                },
-                cost: {
-                  value: results.rows.item(0).cost,
-                  style : Styles.inputText
-                },
-                location: {
-                  value: results.rows.item(0).location,
-                  style : Styles.inputText
-                },
-                comment: {
-                  value: results.rows.item(0).comment,
-                  style : Styles.inputText
-                },
-                text: Constants.UPDATE_BTN,
-                detail_id: this.props.id
-              });
-          });
-        }
-        
-    });
+    
+    
 
     this.onChange = this.onChange.bind(this);
     this.doRegister = this.doRegister.bind(this);
@@ -111,7 +65,8 @@ export default class  Action extends Component<Props> {
         style : Styles.inputText
       },
       detail_id : Constants.EMPTY,
-      types : types,
+      types : [],
+      locations: [],
       validate : [],
       checked: true,
       secureTextEntry: true,
@@ -122,6 +77,70 @@ export default class  Action extends Component<Props> {
         style : Styles.inputText
       },
     };
+  }
+
+  componentDidMount() {
+    db.transaction((tx) => {
+        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
+            var types = [];
+            var len = results.rows.length;
+            for(var i = 0; i < len; i++) {
+               var row = results.rows.item(i);
+               var obj = {value: row.value, name: row.name, color: row.color, icon: ''};
+               types.push(obj);
+               this.setState({
+                  types : types,
+                  type: {
+                    value: this.state.type.value === Constants.EMPTY ? types[0].value : this.state.type.value
+                  }
+               });
+            }
+        });
+
+        tx.executeSql('SELECT * FROM ' + Constants.LOCATIONS_TBL + ' ORDER BY created_at DESC', [], (tx, results) => {
+            var locations = [];
+            var len = results.rows.length;
+            for(var i = 0; i < len; i++) {
+               var row = results.rows.item(i);
+               var obj = {id: row.id, name: row.name};
+               locations.push(obj);
+               this.setState({
+                  locations : locations,
+               });
+            }
+        });
+
+        if(this.props.id !== Constants.EMPTY) {
+            tx.executeSql('SELECT * FROM ' + Constants.ACTIONS_TBL + ' WHERE id = ?', [this.props.id], (tx, results) => {
+            var len = results.rows.length;
+            this.setState({
+                action: {
+                  value: CommonUtils.cnvNull(results.rows.item(0).name),
+                  style : Styles.inputText
+                },
+                type: {
+                  value: results.rows.item(0).type_id,
+                  style : Styles.inputText
+                },
+                cost: {
+                  value: CommonUtils.cnvNull(results.rows.item(0).cost),
+                  style : Styles.inputText
+                },
+                location: {
+                  value: results.rows.item(0).location_id,
+                  style : Styles.inputText
+                },
+                comment: {
+                  value: CommonUtils.cnvNull(results.rows.item(0).comment),
+                  style : Styles.inputText
+                },
+                text: Constants.UPDATE_BTN,
+                detail_id: this.props.id
+              });
+          });
+        }
+        
+    });
   }
 
   onChange(text, type) {
@@ -169,6 +188,15 @@ export default class  Action extends Component<Props> {
         }
       });
     }
+
+    if(type === 5) {
+      this.setState({
+        location: {
+          value : text,
+          style : Styles.inputText
+        }
+      });
+    }
     
   }
 
@@ -184,7 +212,7 @@ export default class  Action extends Component<Props> {
     let updated_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
     let sql = 'INSERT INTO actions(name,cost,time,location,comment,type_id,is_sync,created_at,updated_at) VALUES("' + action + '","' + cost + '","' + time + '","' + location + '","' + comment + '","' + type + '",0,"' + created_at + '","' + updated_at + '")';
     if(this.state.detail_id !== Constants.EMPTY) {
-      sql = 'UPDATE actions SET name = "' + action + '", cost = "' + cost + '", location = "' + location + '", comment = "' + comment + '", type_id = ' + type + ', is_sync = 0, updated_at = "' + updated_at + '" WHERE id = ' + this.state.detail_id;
+      sql = 'UPDATE actions SET name = "' + action + '", cost = "' + cost + '", location_id = "' + location + '", comment = "' + comment + '", type_id = ' + type + ', is_sync = 0, updated_at = "' + updated_at + '" WHERE id = ' + this.state.detail_id;
     }
     db.transaction((tx) => {
         tx.executeSql(sql, [], (tx, results) => {
@@ -217,6 +245,12 @@ export default class  Action extends Component<Props> {
         return item;
     });
 
+    var locations = this.state.locations.map((location, index) => {
+        let item = <Picker.Item label={location.name} value={location.id} key={index} />;
+        
+        return item;
+    });
+
     return (
         <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
           <View style={Styles.registerContainer}>
@@ -241,21 +275,20 @@ export default class  Action extends Component<Props> {
               </TouchableHighlight>
             </View>
             <View style={{flexDirection:'row'}}>
+              <Picker
+                selectedValue={this.state.location.value}
+                style={Styles.inputText}
+                onValueChange={(itemValue, itemIndex) => this.onChange(itemValue, 5) }>
+                {locations}
+              </Picker>
+            </View>
+            <View style={{flexDirection:'row'}}>
               <TextInput
               underlineColorAndroid='transparent'
               style={this.state.cost.style}
               onChangeText={ (text) => this.onChange(text, 2) }
               value={this.state.cost.value}
               placeholder="Chi phí"
-              />
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <TextInput
-              underlineColorAndroid='transparent'
-              style={this.state.location.style}
-              onChangeText={ (text) => this.onChange(text, 3) }
-              value={this.state.location.value}
-              placeholder="Vị trí"
               />
             </View>
             <View style={{flexDirection:'row'}}>
