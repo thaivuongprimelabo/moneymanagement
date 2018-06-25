@@ -21,9 +21,12 @@ import Home from './src/Home';
 import Test from './src/Test';
 import Month from './src/Month';
 import Action from './src/Action';
+import ActionModal from './src/ActionModal';
 import Day from './src/Day';
 import Settings from './src/Settings';
 import Welcome from './src/Welcome';
+import ScreenA from './src/ScreenA';
+import ScreenB from './src/ScreenB';
 
 class App extends Component<Props> {
   render() {
@@ -44,7 +47,10 @@ export default createStackNavigator(
     Action: {screen: Action},
     Day: {screen: Day},
     Settings: {screen: Settings},
-    Welcome: {screen: Welcome}
+    Welcome: {screen: Welcome},
+    ScreenA: {screen: ScreenA},
+    ScreenB: {screen: ScreenB},
+    ActionModal: {screen: ActionModal},
   },
   {
     initialRouteName: 'Welcome'

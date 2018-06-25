@@ -13,12 +13,12 @@ import {
   Button,
   TouchableOpacity,
   Alert,
-  Image
+  Image,
+  FlatList
 } from 'react-native';
 
 import Constants from './constants/Constants';
 import Styles from './constants/Styles';
-import GridView from 'react-native-super-grid';
 import CommonUtils from './utils/CommonUtils';
 
 var SQLite = require('react-native-sqlite-storage')
@@ -37,7 +37,12 @@ export default class Month extends Component<Props> {
       headerTintColor: '#fff',
       headerTitleStyle: {
           fontWeight: 'bold',
-      }
+      },
+      headerLeft: (
+          <TouchableOpacity  style={{ marginLeft:20 }} onPress={ navigation.getParam('handleBack') } >
+              <Image source={require('./images/back_icon.png')} />
+          </TouchableOpacity >
+      ),
     }
   };
 
@@ -54,6 +59,7 @@ export default class Month extends Component<Props> {
 
   componentDidMount() {
     console.log('componentWillMount:Month.js');
+    this.props.navigation.setParams({ handleBack: this._handleBack });
   }
 
   componentWillMount() {
@@ -86,6 +92,11 @@ export default class Month extends Component<Props> {
       color: color
     });
   }
+
+  _handleBack = () => {
+    this.props.navigation.state.params.onRefresh();
+    this.props.navigation.goBack();
+  };
 
   doDayClick(day) {
     day = JSON.stringify(day);
@@ -124,18 +135,35 @@ export default class Month extends Component<Props> {
   render() {
 
     return (
-        <GridView
-          itemDimension={60}
-          items={this.state.daysInMonth}
-          style={styles.gridView}
-          renderItem={item => (
-            <TouchableOpacity onPress={() => this.doDayClick(item.name ) } onLongPress= { () => this.usedInDay(item.name) }>
-              <View style={[styles.itemContainer, { backgroundColor: item.code }]}>
-                <Text style={styles.itemName}>{ item.name }</Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        />
+        <View style={{ flex:1, paddingTop:7 }}>
+          <FlatList
+              contentContainerStyle={styles.list}
+              data={this.state.daysInMonth}
+              extraData={this.state}
+              numColumns={5}
+              keyExtractor={(item, index) => index}
+              renderItem={({item}) => 
+                
+                <TouchableOpacity  onPress={ () => this.doDayClick(item.name) } >
+                  <View style={{
+                      flex: 1,
+                      minWidth: 64,
+                      maxWidth: 64,
+                      height: 64,
+                      maxHeight:64,
+                      backgroundColor: item.code,
+                      marginLeft:7, 
+                      marginBottom: 7,
+                      borderRadius:4,
+                      paddingLeft:5,
+                      paddingTop:5
+                    }}>
+                      <Text style={styles.itemName}>{ item.name }</Text>
+                  </View>
+                </TouchableOpacity> 
+
+            } />
+        </View>
     );
   }
 }
@@ -164,4 +192,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
   },
+  list: {
+    justifyContent: 'center',
+    flexDirection: 'column',
+  }
 });

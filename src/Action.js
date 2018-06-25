@@ -19,8 +19,11 @@ import {
   Keyboard,
   Picker,
   Image,
-  Modal
+  Modal,
+  DeviceEventEmitter,
+  Dimensions
 } from 'react-native';
+import {HideWithKeyboard, ShowWithKeyboard} from 'react-native-hide-with-keyboard';
 
 import Constants from './constants/Constants';
 import Styles from './constants/Styles';
@@ -36,12 +39,8 @@ export default class  Action extends Component<Props> {
 
   constructor(props) {
     super(props);
-    
-    
-
     this.onChange = this.onChange.bind(this);
     this.doRegister = this.doRegister.bind(this);
-    this.doClear = this.doClear.bind(this);
     this.setTypeModalVisible = this.setTypeModalVisible.bind(this);
     this.state = { 
       action: {
@@ -64,9 +63,14 @@ export default class  Action extends Component<Props> {
         value : Constants.EMPTY,
         style : Styles.inputText
       },
+      created_at: {
+        value : Constants.EMPTY,
+        style : Styles.inputText
+      },
       detail_id : Constants.EMPTY,
       types : [],
       locations: [],
+      action_detail: [],
       validate : [],
       checked: true,
       secureTextEntry: true,
@@ -76,11 +80,51 @@ export default class  Action extends Component<Props> {
         value : Constants.EMPTY,
         style : Styles.inputText
       },
+      showForm: false
     };
   }
 
+  static navigationOptions = ({ navigation }) => {
+    const { params = {} } = navigation.state;
+
+    if(params.screenNext === 'Month') {
+      this.calculateCost();
+    }
+    return {
+      title: 'Đăng ký hoạt động',
+      headerStyle: {
+        backgroundColor: Constants.DEFAULT_COLOR 
+      },
+      headerTintColor: '#fff',
+      headerTitleStyle: {
+        fontWeight: 'bold',
+      },
+      headerRight: (
+          <TouchableOpacity  style={{ marginRight:10 }} onPress={ navigation.getParam('addAction') } >
+              <Image source={require('./images/add_record_icon.png')} style={{width: 25, height: 25}} />
+          </TouchableOpacity >
+      )
+    };
+  };
+
   componentDidMount() {
+    console.log('componentDidMount:Action.js');
+    this.props.navigation.setParams({ addAction: this._addAction });
+    this.getTypesLocations();
+
+  }
+
+  componentWillMount() {
+    console.log('componentWillMount:Action.js');
+  }
+
+  _addAction() {
+    this.doRegister();
+  }
+
+  getTypesLocations() {
     db.transaction((tx) => {
+
         tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
             var types = [];
             var len = results.rows.length;
@@ -89,10 +133,7 @@ export default class  Action extends Component<Props> {
                var obj = {value: row.value, name: row.name, color: row.color, icon: ''};
                types.push(obj);
                this.setState({
-                  types : types,
-                  type: {
-                    value: this.state.type.value === Constants.EMPTY ? types[0].value : this.state.type.value
-                  }
+                  types : types
                });
             }
         });
@@ -106,40 +147,10 @@ export default class  Action extends Component<Props> {
                locations.push(obj);
                this.setState({
                   locations : locations,
+                  showForm: true
                });
             }
         });
-
-        if(this.props.id !== Constants.EMPTY) {
-            tx.executeSql('SELECT * FROM ' + Constants.ACTIONS_TBL + ' WHERE id = ?', [this.props.id], (tx, results) => {
-            var len = results.rows.length;
-            this.setState({
-                action: {
-                  value: CommonUtils.cnvNull(results.rows.item(0).name),
-                  style : Styles.inputText
-                },
-                type: {
-                  value: results.rows.item(0).type_id,
-                  style : Styles.inputText
-                },
-                cost: {
-                  value: CommonUtils.cnvNull(results.rows.item(0).cost),
-                  style : Styles.inputText
-                },
-                location: {
-                  value: results.rows.item(0).location_id,
-                  style : Styles.inputText
-                },
-                comment: {
-                  value: CommonUtils.cnvNull(results.rows.item(0).comment),
-                  style : Styles.inputText
-                },
-                text: Constants.UPDATE_BTN,
-                detail_id: this.props.id
-              });
-          });
-        }
-        
     });
   }
 
@@ -197,6 +208,15 @@ export default class  Action extends Component<Props> {
         }
       });
     }
+
+    if(type === 6) {
+      this.setState({
+        created_at: {
+          value : text,
+          style : Styles.inputText
+        }
+      });
+    }
     
   }
 
@@ -210,19 +230,15 @@ export default class  Action extends Component<Props> {
     let location = this.state.location.value;
     let created_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
     let updated_at = CommonUtils.getCurrentDate('YYYY/MM/DD HH:II:SS');
-    let sql = 'INSERT INTO actions(name,cost,time,location,comment,type_id,is_sync,created_at,updated_at) VALUES("' + action + '","' + cost + '","' + time + '","' + location + '","' + comment + '","' + type + '",0,"' + created_at + '","' + updated_at + '")';
+    let sql = 'INSERT INTO actions(name,cost,time,location_id,comment,type_id,is_sync,created_at,updated_at) VALUES("' + action + '","' + cost + '","' + time + '","' + location + '","' + comment + '","' + type + '",0,"' + created_at + '","' + updated_at + '")';
     if(this.state.detail_id !== Constants.EMPTY) {
       sql = 'UPDATE actions SET name = "' + action + '", cost = "' + cost + '", location_id = "' + location + '", comment = "' + comment + '", type_id = ' + type + ', is_sync = 0, updated_at = "' + updated_at + '" WHERE id = ' + this.state.detail_id;
     }
     db.transaction((tx) => {
         tx.executeSql(sql, [], (tx, results) => {
+          Alert.alert(Constants.ALERT_INFO, Constants.REGISTER_SUCCESS);
         });
     });
-    this.props.closeModal(false, true);
-  }
-
-  doClear() {
-    this.props.closeModal(false, false);
   }
 
   addType() {
@@ -250,98 +266,96 @@ export default class  Action extends Component<Props> {
         
         return item;
     });
+    if(this.state.showForm) {
+      return (
+            <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+              <View style={[Styles.registerContainer, {height: this.state.visibleHeight} ]}>
+                <View style={{flexDirection:'row'}}>
+                  <TextInput
+                  underlineColorAndroid='transparent'
+                  style={this.state.action.style}
+                  onChangeText={ (text) => this.onChange(text, 0) }
+                  value={this.state.action.value}
+                  placeholder="Hoạt động"
+                  />
+                </View>
+                <View style={{flexDirection:'row'}}>
+                  <Picker
+                    selectedValue={this.state.type.value}
+                    style={Styles.inputText}
+                    onValueChange={(itemValue, itemIndex) => this.onChange(itemValue, 1) }>
+                    <Picker.Item label="Vui lòng chọn" value=""/>
+                    {types}
+                  </Picker>
+                  <TouchableHighlight onPress={ () => this.addType() } style= {{ marginTop:15 }}>
+                    <Image source={require('./images/add_icon.png')} style={{width: 40, height: 40}} />
+                  </TouchableHighlight>
+                </View>
+                <View style={{flexDirection:'row'}}>
+                  <Picker
+                    selectedValue={this.state.location.value}
+                    style={Styles.inputText}
+                    onValueChange={(itemValue, itemIndex) => this.onChange(itemValue, 5) }>
+                    <Picker.Item label="Vui lòng chọn" value="" />
+                    {locations}
+                  </Picker>
+                </View>
+                <View style={{flexDirection:'row'}}>
+                  <TextInput
+                  underlineColorAndroid='transparent'
+                  style={this.state.cost.style}
+                  onChangeText={ (text) => this.onChange(text, 2) }
+                  value={this.state.cost.value}
+                  placeholder="Chi phí"
+                  />
+                </View>
+                <View style={{flexDirection:'row'}}>
+                  <TextInput
+                  underlineColorAndroid='transparent'
+                  style={this.state.comment.style}
+                  onChangeText={ (text) => this.onChange(text, 4) }
+                  value={this.state.comment.value}
+                  placeholder="Bình luận"
+                  />
+                </View>
 
-    return (
-        <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-          <View style={Styles.registerContainer}>
-            <View style={{flexDirection:'row'}}>
-              <TextInput
-              underlineColorAndroid='transparent'
-              style={this.state.action.style}
-              onChangeText={ (text) => this.onChange(text, 0) }
-              value={this.state.action.value}
-              placeholder="Hoạt động"
-              />
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <Picker
-                selectedValue={this.state.type.value}
-                style={Styles.inputText}
-                onValueChange={(itemValue, itemIndex) => this.onChange(itemValue, 1) }>
-                {types}
-              </Picker>
-              <TouchableHighlight onPress={ () => this.addType() } style= {{ marginTop:15 }}>
-                <Image source={require('./images/add_icon.png')} style={{width: 40, height: 40}} />
-              </TouchableHighlight>
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <Picker
-                selectedValue={this.state.location.value}
-                style={Styles.inputText}
-                onValueChange={(itemValue, itemIndex) => this.onChange(itemValue, 5) }>
-                {locations}
-              </Picker>
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <TextInput
-              underlineColorAndroid='transparent'
-              style={this.state.cost.style}
-              onChangeText={ (text) => this.onChange(text, 2) }
-              value={this.state.cost.value}
-              placeholder="Chi phí"
-              />
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <TextInput
-              underlineColorAndroid='transparent'
-              style={this.state.comment.style}
-              onChangeText={ (text) => this.onChange(text, 4) }
-              value={this.state.comment.value}
-              placeholder="Bình luận"
-              />
-            </View>
-            <View style={{flexDirection:'row'}}>
-              <View style={{flex:0.35, marginTop:10, marginRight:5 }} >
+                <View style={{flexDirection:'row'}}>
+                    <TextInput
+                    underlineColorAndroid='transparent'
+                    style={this.state.created_at.style}
+                    onChangeText={ (text) => this.onChange(text, 6) }
+                    value={this.state.created_at.value}
+                    placeholder="Thời gian"
+                    />
+                </View>
                 
-                <Button
-                onPress={this.doRegister}
-                title={this.state.text}
-                color={ Constants.DEFAULT_COLOR }
-                accessibilityLabel="Learn more about this purple button"
-                />
-              </View>
-              <View style={{flex:0.35, marginTop:10 }} >
-                <Button
-                onPress={this.doClear}
-                title="Hủy"
-                color={ Constants.DEFAULT_COLOR }
-                accessibilityLabel="Learn more about this purple button"
-                />
-              </View>
-            </View>
-            <Modal
-              animationType="fade"
-              transparent={true}
-              visible={this.state.modalVisible}
-              onRequestClose={() => this.setModalVisible(false, false) }>
+                <Modal
+                  animationType="fade"
+                  transparent={true}
+                  visible={this.state.modalVisible}
+                  onRequestClose={() => this.setModalVisible(false, false) }>
 
-                <View style={{
-                    flex: 1,
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center', }}>
                     <View style={{
-                            width: 300,
-                            height: 300}}>
-                      <AddType closeTypeModal = { this.setTypeModalVisible } />
+                        flex: 1,
+                        flexDirection: 'column',
+                        justifyContent: 'center',
+                        alignItems: 'center', }}>
+                        <View style={{
+                                width: 300,
+                                height: 300}}>
+                          <AddType closeTypeModal = { this.setTypeModalVisible } />
+                      </View>
                   </View>
+                  
+                </Modal>
               </View>
               
-            </Modal>
-          </View>
-          
 
-        </TouchableWithoutFeedback>
-    );
+            </TouchableWithoutFeedback>
+        );
+      } else {
+        return null;
+      }
   }
 }
+

@@ -55,7 +55,7 @@ const CommonUtils = {
   },
 
   cnvNull: (input) => {
-    return input == null || input == 'null' ? '--' : input;
+    return input == null || input == 'null' ? '' : input;
   }
 }
 

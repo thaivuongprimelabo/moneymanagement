@@ -15,13 +15,13 @@ import {
   Image,
   Modal,
   TouchableHighlight,
-  Alert
+  Alert,
+  FlatList
 } from 'react-native';
 
 import Constants from './constants/Constants';
 import Styles from './constants/Styles';
-import GridView from 'react-native-super-grid';
-import Action from '../src/Action';
+import ActionModal from '../src/ActionModal';
 import CommonUtils from './utils/CommonUtils';
 
 var SQLite = require('react-native-sqlite-storage')
@@ -48,12 +48,12 @@ export default class Day extends Component<Props> {
       fullTime: CommonUtils.formatDatetime(year, month, day, 'YYYYMMDD'),
       color: color,
       modalVisible: false,
-      detail_id: 0,
-      actionInDay:[]
+      actionInDay:[],
+      types:[],
+      locations: [],
+      action_detail: [],
+      loading: false
     }
-
-    
-
   }
 
   
@@ -71,7 +71,7 @@ export default class Day extends Component<Props> {
           fontWeight: 'bold',
       },
       headerRight: (
-        <TouchableOpacity  style={{ marginRight:10 }} onPress={ params.increaseCount }>
+        <TouchableOpacity  style={{ marginRight:10 }} onPress={ navigation.getParam('openActionModal') }>
             <Image source={require('./images/add_icon.png')} style={{width: 40, height: 40}} />
         </TouchableOpacity >
       ),
@@ -85,16 +85,36 @@ export default class Day extends Component<Props> {
 
   componentDidMount() {
     console.log('componentWillMount:Day.js');
-    this.props.navigation.setParams({ increaseCount: this.doAction });
+    this.props.navigation.setParams({ openActionModal: this._openActionModal });
+    this.getTypesLocations();
     
   }
 
-  doAction = () => {
-    //this.props.navigation.navigate('Action', {month: this.state.currentMonth, year: this.state.currentYear, day: this.state.currentDay, color: this.state.color});
-    this.setState({
-      detail_id : Constants.EMPTY
-    });
-    this.setModalVisible(!this.state.modalVisible, false);
+  _openActionModal = () => {
+    this._getDetailInfo(0); 
+  }
+
+  _getDetailInfo(id) {
+    
+    if(id !== 0) {
+      db.transaction((tx) => {
+          
+          tx.executeSql('SELECT * FROM ' + Constants.ACTIONS_TBL + ' WHERE id = ?', [id], (tx, results) => {
+            len = results.rows.length;
+            this.setState({
+                action_detail: results.rows.item(0)
+            });
+            this.setModalVisible(!this.state.modalVisible, false);
+          });
+          
+      });
+    } else {
+      this.setState({
+        action_detail: []
+      });
+      this.setModalVisible(!this.state.modalVisible, false);
+    }
+
   }
 
   getActionList() {
@@ -118,7 +138,38 @@ export default class Day extends Component<Props> {
                     actionInDay : actionInDay
                  });
             }
+        });
+    });
+  }
+
+  getTypesLocations() {
+    db.transaction((tx) => {
+
+        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
+            var types = [];
+            var len = results.rows.length;
+            for(var i = 0; i < len; i++) {
+               var row = results.rows.item(i);
+               var obj = {value: row.value, name: row.name, color: row.color, icon: ''};
+               types.push(obj);
+               this.setState({
+                  types : types
+               });
+            }
             
+        });
+
+        tx.executeSql('SELECT * FROM ' + Constants.LOCATIONS_TBL + ' ORDER BY created_at DESC', [], (tx, results) => {
+            var locations = [];
+            var len = results.rows.length;
+            for(var i = 0; i < len; i++) {
+               var row = results.rows.item(i);
+               var obj = {id: row.id, name: row.name};
+               locations.push(obj);
+               this.setState({
+                  locations : locations
+               });
+            }
         });
     });
   }
@@ -136,10 +187,7 @@ export default class Day extends Component<Props> {
   }
 
   doDayClick(id) {
-    this.setState({
-      detail_id : id
-    });
-    this.setModalVisible(true);
+    this._getDetailInfo(id);
   }
 
   deleteAction(id, name) {
@@ -156,6 +204,10 @@ export default class Day extends Component<Props> {
     
   }
 
+  setLoadingVisible(visible) {
+    this.setState({loading: visible});
+  }
+
   doDelete(id) {
     db.transaction((tx) => {
         tx.executeSql('DELETE FROM actions WHERE id = ' + id, [], (tx, results) => {
@@ -167,30 +219,42 @@ export default class Day extends Component<Props> {
   render() {
 
     return (
-        <View style={{ flex:1 }}>
-          <GridView
-            itemDimension={260}
-            items={this.state.actionInDay}
-            style={styles.gridView}
-            renderItem={(item,index) => (
-              <TouchableOpacity onPress={() => this.doDayClick(item.id) } onLongPress={() => this.deleteAction(item.id, item.name) }>
-                <View style={[styles.itemContainer, { backgroundColor: this.state.color }]}>
-                  <View style={{ flex: 1, flexDirection: 'row' }}>
-                    <View style={ {flex: 0.8, flexDirection: 'column'} }>
-                      <Text style={styles.itemName}>{ item.name }</Text>
-                      <Text style={styles.itemName}>{ item.cost }</Text>
-                      <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.location) }</Text>
-                      <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.created_at) }</Text>
-                    </View>
-                    <View style={ {flex: 0.2, flexDirection: 'column'} }>
-                      <Image style={{width: 66, height: 66, marginTop:5}} source={{ uri:item.icon }}></Image>
-                    </View>
+        <View style={{ flex:1, paddingTop: 7, paddingLeft:7, paddingRight:7 }}>
+          
+          <FlatList
+              contentContainerStyle={styles.list}
+              data={this.state.actionInDay}
+              extraData={this.state}
+              numColumns={1}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => 
+                
+                <TouchableOpacity onPress={() => this.doDayClick(item.id) } onLongPress={() => this.deleteAction(item.id, item.name) }>
+                  <View style={{
+                      flex: 1,
+                      height: 100,
+                      maxHeight:100,
+                      backgroundColor: this.state.color,
+                      marginBottom: 7,
+                      borderRadius:4,
+                      paddingLeft:5,
+                      paddingTop:5,
+                      paddingRight:5,
+                      flexDirection: 'row'
+                    }}>
+                      <View style={ {flex: 0.8, flexDirection: 'column'} }>
+                        <Text style={styles.itemName}>{ item.name }</Text>
+                        <Text style={styles.itemName}>{ item.cost }</Text>
+                        <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.location) }</Text>
+                        <Text style={styles.itemName}>{ CommonUtils.cnvNull(item.created_at) }</Text>
+                      </View>
+                      <View style={ {flex: 0.2, flexDirection: 'column'} }>
+                        <Image style={{width: 66, height: 66, marginTop:5}} source={{ uri:item.icon }}></Image>
+                      </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            )}
-          >
-          </GridView>
+                </TouchableOpacity> 
+
+            } />
           <View  style={{marginTop: 22}}>
             <Modal
               animationType="fade"
@@ -206,8 +270,8 @@ export default class Day extends Component<Props> {
                     backgroundColor: 'rgba(51,51,51,0.7)' }}>
                     <View style={{
                             width: 300,
-                            height: 450}}>
-                      <Action closeModal={ this.setModalVisible } time={ this.state.fullTime } id = { this.state.detail_id } />
+                            height: 400}}>
+                      <ActionModal closeModal={ this.setModalVisible } time={ this.state.fullTime } types= { this.state.types } locations = { this.state.locations } action_detail = { this.state.action_detail } />
                     </View>
                 </View>
             </Modal>
@@ -238,4 +302,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#fff',
   },
+  list: {
+    justifyContent: 'center',
+    flexDirection: 'column',
+  }
 });

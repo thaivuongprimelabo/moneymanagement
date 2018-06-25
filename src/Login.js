@@ -149,6 +149,7 @@ export default class Login extends Component<Props> {
 
       })
       .catch((error) =>{
+        this.setLoadingVisible(false);
         alert('error:' + error);
       });
     }

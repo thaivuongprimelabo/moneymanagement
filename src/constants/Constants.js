@@ -43,5 +43,6 @@ export default {
   SYNC_COUNT_SUCCESS : 'Đã đồng bộ:\n-Loại: {0} dữ liệu.\n-Hoạt động: {1} dữ liệu.\n-Vị trí: {2} dữ liệu.',
   ACTIONSHEET_SETTING_TITLE: 'Cài đặt',
   BACKUP_FINISH: 'Đã backup tất cả dữ liệu',
-  SERVER_ERROR: 'Không thể kết nối tới máy chủ.'
+  SERVER_ERROR: 'Không thể kết nối tới máy chủ.',
+  REGISTER_SUCCESS: 'Đăng ký thành công'
 };
