@@ -80,12 +80,13 @@ export default class Day extends Component<Props> {
 
   componentWillMount() {
     console.log('componentWillMount:Day.js');
-    this.getActionList();
+    
   }
 
   componentDidMount() {
-    console.log('componentWillMount:Day.js');
+    console.log('componentDidMount:Day.js');
     this.props.navigation.setParams({ openActionModal: this._openActionModal });
+    this.getActionList();
     this.getTypesLocations();
     
   }
@@ -123,7 +124,6 @@ export default class Day extends Component<Props> {
         var sql = 'SELECT actions.*, types.color AS color, types.icon AS icon, locations.name as location_name FROM actions ';
         sql += 'LEFT JOIN '+ Constants.LOCATIONS_TBL +' ON actions.location_id = locations.id ';
         sql += 'LEFT JOIN ' + Constants.TYPES_TBL + ' ON actions.type_id = types.value WHERE actions.time="' + this.state.fullTime + '"';
-        console.log(sql);
         tx.executeSql(sql, [], (tx, results) => {
             var len = results.rows.length;
             if(len > 0) {
@@ -145,7 +145,7 @@ export default class Day extends Component<Props> {
   getTypesLocations() {
     db.transaction((tx) => {
 
-        tx.executeSql('SELECT * FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
+        tx.executeSql('SELECT value, name, color, icon FROM ' + Constants.TYPES_TBL, [], (tx, results) => {
             var types = [];
             var len = results.rows.length;
             for(var i = 0; i < len; i++) {
@@ -159,7 +159,7 @@ export default class Day extends Component<Props> {
             
         });
 
-        tx.executeSql('SELECT * FROM ' + Constants.LOCATIONS_TBL + ' ORDER BY created_at DESC', [], (tx, results) => {
+        tx.executeSql('SELECT id, name FROM ' + Constants.LOCATIONS_TBL + ' ORDER BY created_at DESC', [], (tx, results) => {
             var locations = [];
             var len = results.rows.length;
             for(var i = 0; i < len; i++) {
